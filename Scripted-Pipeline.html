@@ -1,0 +1,50 @@
+<xmp>
+
+node{
+    stage("Code"){
+        git branch: 'main', url: 'https://github.com/aarushtechnologies/java3.git'
+    }
+}
+node{
+    stage("Build"){
+        def mavenHome = tool name:"maven3", type:"maven"
+        def mavenCMD = "${mavenHome}/bin/mvn"
+        sh "${mavenCMD} clean package"
+    }
+}
+node{
+    stage("CQT"){
+        withSonarQubeEnv("mysonar"){
+        def mavenHome = tool name:"maven3", type:"maven"
+        def mavenCMD = "${mavenHome}/bin/mvn"
+        sh "${mavenCMD} sonar:sonar"
+        }
+    }
+}
+node{
+    stage("Upload"){
+        nexusArtifactUploader artifacts: [[artifactId: 'webapp', classifier: '', file: 'target/webapp.war', type: 'war']], credentialsId: '34f290d0-8a20-4ba7-9501-f93ad91a531f', groupId: 'aarush', nexusUrl: '10.0.2.15:8081', nexusVersion: 'nexus3', protocol: 'http', repository: 'JavaThird', version: '2.0.0'
+    }
+}
+
+node{
+    stage("Deploy"){
+        withCredentials([sshUserPrivateKey(credentialsId: 'ssh', keyFileVariable: 'SSH_KEY')]) {
+          sh '''
+          
+          ssh -i $SSH_KEY root@10.0.2.15 "sh /opt/tomcat/bin/shutdown.sh"
+          
+          ssh -i $SSH_KEY root@10.0.2.15 "rm -f /opt/tomcat/webapps/webapp.war"
+          
+          scp -i $SSH_KEY target/webapp.war root@10.0.2.15:/opt/tomcat/webapps/
+          
+          ssh -i $SSH_KEY root@10.0.2.15 "sh /opt/tomcat/bin/startup.sh"
+          
+          sleep 5
+          
+          '''
+        }
+    }
+}
+
+</xmp>
