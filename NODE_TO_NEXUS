@@ -1,0 +1,26 @@
+# 1. Navigate to directory
+cd /var/lib/jenkins/workspace/node-online
+
+# 2. Install dependencies
+echo "Installing dependencies..."
+npm install
+
+# 3. Create versioned tarball
+VERSION=$(node -p "require('./package.json').version")
+
+# FIX: Move excludes to the front and save output to /tmp
+tar --exclude='node_modules' --exclude='.git' -czf /tmp/node-app-${VERSION}.tar.gz .
+
+# 4. Upload to Nexus
+echo "Uploading version ${VERSION} to Nexus..."
+curl -v -u admin:123 --upload-file /tmp/node-app-${VERSION}.tar.gz http://10.0.2.15:8081/repository/node-online/node-app-${VERSION}.tar.gz
+
+# 5. Clean up the temp file
+rm /tmp/node-app-${VERSION}.tar.gz
+
+# 6. Restart PM2
+echo "Starting or restarting the application..."
+pm2 restart node-app1 || pm2 start index.js --name node-app1
+pm2 save
+
+echo "Deployment complete!"
