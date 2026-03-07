@@ -1,0 +1,49 @@
+<xmp>
+TOCAM DEPLOY - PIPELINE SCRIPTED
+
+1. su - jenkins
+
+2. ssh-keygen
+
+3. ssh-copy-id root@10.0.2.15
+
+4. ssh root@10.0.2.15
+
+--------------------------
+5. ssh-agent plugin
+
+6. pipeline - syntax - 
+	sshAgent - Add
+	id - ssh2
+	username - root
+	SSHKEY - private key (generate by jenkins - /var/lib/jenkins/.ssh/id_edu23442)
+	copy paste 
+	Add 
+
+ -------------------------------
+ 7. Script as below :
+ 
+
+node{
+    stage('Code'){
+        git 'https://github.com/aarushtechnologies/sk.git'
+    }
+}
+node{
+    stage('build'){
+        sh 'mvn clean package'
+    }
+}
+node{
+    sshagent(['ssh3']) {
+        sh '''
+        
+        ssh root@10.0.2.15 "sh /opt/tomcat/bin/shutdown.sh"
+        ssh root@10.0.2.15 "rm -f /opt/tomcat/webapps/webapp.war"
+        scp  target/webapp.war root@10.0.2.15:/opt/tomcat/webapps/
+        sleep 10
+        ssh root@10.0.2.15 "sh /opt/tomcat/bin/startup.sh"
+        '''
+    }
+}
+</xmp>
