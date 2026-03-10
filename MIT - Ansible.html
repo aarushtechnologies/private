@@ -1,0 +1,141 @@
+<xmp>
+Ansible Notes :
+-------------------------
+Skip tasks :
+
+command : # ansible-playbook -vvv tags.yml --skip-tags=aarush
+
+---
+- hosts: dev
+  connection: ssh
+
+  tasks:
+    - name: Create file1
+      file: path="file1.txt" state=touch
+
+
+    - name: Create file2
+      file: path="file2.txt" state=touch
+      tags: aarush
+
+
+    - name: Create file3
+      file: path="file3.txt" state=touch
+
+=============================================
+# ansible-playbook -vvv tags.yml --tags=aarush 
+
+Only tags task will run
+
+=============================================
+OS BASED INSTALLATION :
+
+WHEN MODULES 
+
+---
+- hosts: dev
+  connection: ssh
+
+  tasks:
+    - name: Installing tree on Redhat
+      yum: name=tree state=present
+      when: ansible_os_family== "RedHat"
+
+    - name: Installing tree on Ubuntu
+      apt: name=tree state=present
+      when: ansible_os_family== "Ubuntu"
+~                                                
+
+=============================================
+HOW TO CREATE WITH OWNERSHIP (owner:group)
+
+---
+- hosts: dev
+  connection: ssh
+
+  tasks:
+    - name: Create user
+      user: name=Ravi state=present
+
+    - name: Create group
+      group: name=mit2 state=present
+
+    - name: Create a file with ownership
+      file:
+        path: "File3.txt"
+        state: touch
+        owner: Ravi
+        group: mit2
+--------------------------------------------
+
+
+CLONE GITHUB Public Repo CODE ON SLAVE :
+
+
+---
+- hosts: dev
+  connection: ssh
+
+  tasks:
+    - name: Git clone on slave
+      git:
+        repo: https://github.com/aarushtechnologies/sk.git
+        dest: "/root/Desktop/sk"
+        version: "master"
+
+~                                 
+-----------------------------------------
+
+Private Repo :
+
+
+---
+- hosts: dev
+  connection: ssh
+
+  tasks:
+    - name: Git clone on slave
+      git: 
+        repo: https://TOKEN@github.com/aarushtechnologies/sk.git
+        dest: "/root/Desktop/sk"
+        version: "master"
+
+---------------------------------------------------------
+
+HOW TO ENCRYPT FILES :
+ENCRYPT :
+
+[root@localhost mit-ansible]# ansible-vault encrypt git-repo.yml 
+New Vault password: 123
+Confirm New Vault password: 123 
+Encryption successful
+[root@localhost mit-ansible]# cat git-repo.yml 
+
+FILE WILL NOT READBLE NOW !!!
+
+------------------------
+DECRYPT :
+
+[root@localhost mit-ansible]# ansible-vault decrypt git-repo.yml 
+Vault password: 
+Decryption successful
+[root@localhost mit-ansible]# cat git-repo.yml 
+
+-----------------------
+RESET PASSWORD :
+
+[root@localhost mit-ansible]# ansible-vault rekey git-repo.yml 
+Vault password: 
+New Vault password: 
+Confirm New Vault password: 
+Rekey successful
+
+</xmp>
+
+
+
+
+
+
+
+
