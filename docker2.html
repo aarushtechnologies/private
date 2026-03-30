@@ -1,0 +1,35 @@
+<h1> Code => Dockerfile => Image => Upload (Dockerhub) => Container with Paratermeterized Project </h1>
+<xmp>
+pipeline{
+    agent any
+    stages{
+        stage("Code"){
+            steps{
+                git branch: 'main', url: 'https://github.com/aarushtechnologies/port1.git'
+            }
+        }
+         stage("Image"){
+            steps{
+                sh "docker build -t portfolio-$IMAGE html/"
+            }
+        }
+        stage("Upload"){
+            steps{
+                withDockerRegistry(credentialsId: 'docker4',url:'') {
+                    sh '''
+                    docker tag portfolio-$IMAGE aarushtechnologies/portfolio-$IMAGE
+                    docker push aarushtechnologies/portfolio-$IMAGE
+                    '''
+                }   
+            }
+        }
+        
+        stage("Container"){
+            steps{
+                sh "docker run -itd --name cont-portfolio-$CONT -p 110$PORT:80 portfolio-1"
+            }
+        }
+        
+    }
+}
+</xmp>
