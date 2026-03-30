@@ -1,0 +1,27 @@
+<h1>
+Fetch Code from git and make image and run container 
+</h1>
+
+<hr />
+<xmp>
+pipeline{
+    agent any
+    stages{
+        stage("Code"){
+            steps{
+                git branch: 'main', url: 'https://github.com/aarushtechnologies/port1.git'
+            }
+        }
+         stage("Image"){
+            steps{
+                sh "docker build -t portfolio:v1 html/"
+            }
+        }
+         stage("Container"){
+            steps{
+                sh "docker run -itd --name cont-portfolio-v1 -p 1100:80 portfolio:v1"
+            }
+        }
+    }
+}
+</xmp>
