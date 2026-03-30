@@ -26,7 +26,7 @@ pipeline{
         
         stage("Container"){
             steps{
-                sh "docker run -itd --name cont-portfolio-$CONT -p 110$PORT:80 portfolio-1"
+                sh "docker run -itd --name cont-portfolio-$CONT -p 110$PORT:80 portfolio-$IMAGE"
             }
         }
         
