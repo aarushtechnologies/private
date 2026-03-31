@@ -1,0 +1,29 @@
+<h1>
+  Docker Rollback 
+</h1>
+<hr>
+
+<xmp>
+
+  pipeline{
+    agent any
+    stages{
+        stage("Pull"){
+           steps{
+               sh  "docker pull aarushtechnologies/web-${IMAGE}"
+           }
+        }       
+        stage("Run"){
+           steps{
+               sh '''
+               docker stop codingwale || true
+               docker rm codingwale || true
+               docker run -itd --name codingwale -p 1000:80 aarushtechnologies/web-${IMAGE}
+               '''
+           }
+        }       
+    }
+}
+
+  
+</xmp>
