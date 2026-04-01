@@ -1,425 +1,57 @@
-To push your Docker image to Nexus, you’ll use **Nexus Repository Manager as a Docker registry**. Here’s the full step-by-step.
+(Docker → Nexus Push)
+🔹 STEP 1: Create Docker Repo in Nexus
+Go to Nexus UI → Repositories
+Create → Docker (hosted)
 
----
+Set:
 
-## 🧱 1. Prerequisites
+Name: docker-hosted
+Port: 8084 ✅ (IMPORTANT)
+Deployment: Allow redeploy
 
-* Docker installed
-* Jenkins (optional for CI/CD)
-* Nexus Repository Manager running
+👉 Your Docker registry:
 
----
+http://<IP>:8084
+🔹 STEP 2: Enable Docker Login
+Go to Security → Realms
+Enable:
+Docker Bearer Token Realm
+🔹 STEP 3: Configure Docker for HTTP (VERY IMPORTANT)
 
-## ⚙️ 2. Create Docker Repository in Nexus
-
-In Nexus UI:
-
-1. Go to **Settings → Repositories**
-2. Click **Create repository**
-3. Choose **Docker (hosted)**
-4. Configure:
-
-   * Name: `docker-hosted`
-   * HTTP Port: `8084` (example)   => support 8084
-   * Deployment policy: Allow redeploy
-
-👉 Your registry URL becomes:
-
-```
-<your-ip>:8084
-```
-
----
-
-## 🔓 3. Enable Docker Login (Important)
-
-Edit Nexus:
-
-* Go to **Security → Realms**
-* Enable: `Docker Bearer Token Realm`
-
----
-
-## 🔐 4. Login to Nexus Docker Registry
-
-```bash
-docker login <your-ip>:8082
-```
-
-Example:
-
-```bash
-docker login 192.168.1.10:8082
-```
-
-Enter Nexus username/password.
-
----
-
-## 🏷️ 5. Tag Your Image
-
-Your local image:
-
-```
-java3-war-app
-```
-
-Tag it for Nexus:
-
-```bash
-docker tag java3-war-app <your-ip>:8082/java3-war-app:latest
-```
-
-Example:
-
-```bash
-docker tag java3-war-app 192.168.1.10:8082/java3-war-app:latest
-```
-
----
-
-## 🚀 6. Push Image to Nexus
-
-```bash
-docker push <your-ip>:8082/java3-war-app:latest
-```
-
----
-
-## 🔍 7. Verify in Nexus
-
-* Go to **Browse → docker-hosted**
-* You should see your image + tag
-
----
-
-## 🤖 Jenkins Pipeline Example
-
-Add this stage:
-
-```groovy id="lq2lqj"
-stage("Push to Nexus") {
-    steps {
-        withCredentials([usernamePassword(credentialsId: 'nexus-docker-creds', usernameVariable: 'USER', passwordVariable: 'PASS')]) {
-            sh """
-            docker login <your-ip>:8082 -u $USER -p $PASS
-            docker tag java3-war-app <your-ip>:8082/java3-war-app:${BUILD_NUMBER}
-            docker push <your-ip>:8082/java3-war-app:${BUILD_NUMBER}
-            """
-        }
-    }
-}
-```
-
----
-
-## ⚠️ Common Issues
-
-### ❌ “connection refused”
-
-➡️ Check Nexus Docker port (e.g., 8082) is open
-
----
-
-### ❌ “unauthorized”
-
-➡️ Enable Docker Bearer Token Realm
-
----
-
-### ❌ HTTP vs HTTPS issue
-
-If using HTTP (no SSL), configure Docker:
+Because Nexus runs on HTTP, fix this:
 
 Edit:
 
-```bash
-/etc/docker/daemon.json
-```
+sudo vi /etc/docker/daemon.json
 
 Add:
 
-```json
 {
-  "insecure-registries": ["192.168.1.10:8082"]
+  "insecure-registries": ["<IP>:8084"]
 }
-```
 
-Restart Docker:
+Restart:
 
-```bash
 sudo systemctl restart docker
-```
+🔹 STEP 4: Login to Nexus
+docker login <IP>:8084
 
----
+❌ NOT 8082
+✅ ALWAYS use 8084
 
-## 🧠 Best Practice
+🔹 STEP 5: Tag Your Image
 
-* Use version tags instead of `latest`
-* Example:
+Your image:
 
-```
-java3-war-app:1.0.${BUILD_NUMBER}
-```
+java3-war-app
 
----
+Tag it:
 
-If you want, I can help you:
-
-* Pull and deploy from Nexus
-* Integrate Nexus fully into CI/CD
-* Or set up Nexus with HTTPS (production-ready)
-
-======================================
-
-This error is very common when working with Nexus + Docker 👇
-
-## ❌ Problem
-
-```
-http: server gave HTTP response to HTTPS client
-```
-
-👉 Your Docker client is trying to use **HTTPS**, but your Nexus Repository Manager Docker repo is running on **HTTP**.
-
----
-
-## ✅ Fix: Allow Insecure Registry (HTTP)
-
-You need to tell Docker to trust your Nexus registry.
-
-### 🔧 Step 1: Edit Docker daemon config
-
-Open:
-
-```bash
-sudo vi /etc/docker/daemon.json
-```
-
-Add this:
-
-```json
-{
-  "insecure-registries": ["10.0.2.15:8084"]
-}
-```
-
----
-
-### 🔄 Step 2: Restart Docker
-
-```bash
-sudo systemctl restart docker
-```
-
----
-
-### 🔐 Step 3: Login again
-
-```bash
-docker login 10.0.2.15:8084
-```
-
----
-
-### 🚀 Step 4: Push again
-
-```bash
-docker push 10.0.2.15:8084/java-1
-```
-
----
-
-## ⚠️ Important Checks
-
-### 1. Use correct port
-
-* Nexus UI → `8081` ✅ (browser)
-* Docker repo → `8084` ✅ (push/pull)
-
-👉 You correctly used:
-
-```
-10.0.2.15:8084
-```
-
----
-
-### 2. Repository type
-
-Make sure your repo (`docker1`) is:
-
-* Type: **Docker (hosted)**
-* Has port: **8084**
-
----
-
-### 3. Enable Docker Realm
-
-In Nexus:
-
-* Security → Realms
-* Enable: **Docker Bearer Token Realm**
-
----
-
-## 🧠 Why this happens
-
-Docker assumes:
-
-* `https://registry` by default
-
-But Nexus (by default) runs:
-
-* `http://registry`
-
-➡️ mismatch = error
-
----
-
-## ✅ Production Tip
-
-Instead of insecure registry, configure:
-
-* HTTPS (SSL) in Nexus
-* Use reverse proxy (Nginx)
-
----
-
-If you want, I can:
-
-* Fix your Jenkins pipeline for Nexus push
-* Or help you configure Nexus with HTTPS (best practice)
-
-
-===================
-
-HOW TO PULL NOW ?
-
-Great, once your image is successfully pushed to Nexus, pulling it is straightforward 👍
-
----
-
-## 📥 1. Login to Nexus Docker Registry
-
-```bash
-docker login 10.0.2.15:8084
-```
-
-Use your Nexus credentials.
-
----
-
-## 📦 2. Pull the Image
-
-```bash
-docker pull 10.0.2.15:8084/java-1:latest
-```
-
-👉 If you used a custom tag:
-
-```bash
-docker pull 10.0.2.15:8084/java-1:<tag>
-```
-
----
-
-## 🚀 3. Run the Container
-
-Since your app is a `.war` running on Apache Tomcat:
-
-```bash
-docker run -d -p 8081:8080 --name java1-container 10.0.2.15:8084/java-1:latest
-```
-
-👉 Access:
-
-```bash
-http://localhost:8081/
-```
-
----
-
-## ⚠️ Important (Same as Push)
-
-If you haven’t already configured insecure registry on this machine:
-
-Edit:
-
-```bash
-/etc/docker/daemon.json
-```
-
-```json
-{
-  "insecure-registries": ["10.0.2.15:8084"]
-}
-```
-
-Restart Docker:
-
-```bash
-sudo systemctl restart docker
-```
-
----
-
-## 🔍 Verify Image
-
-```bash
-docker images
-```
-
-You should see:
-
-```bash
-10.0.2.15:8084/java-1
-```
-
----
-
-## 🧠 Common Issues
-
-### ❌ “pull access denied”
-
-➡️ Run `docker login` again
-
----
-
-### ❌ Same HTTPS error again
-
-➡️ Insecure registry not configured properly
-
----
-
-### ❌ Image not found
-
-➡️ Check:
-
-* Correct repo name (`java-1`)
-* Correct tag (`latest` or build number)
-
----
-
-## 🔁 Jenkins Tip (Optional)
-
-You can also add a deploy stage:
-
-```groovy
-stage("Pull & Run from Nexus") {
-    steps {
-        sh """
-        docker pull 10.0.2.15:8084/java-1:${BUILD_NUMBER}
-        docker rm -f java1-container || true
-        docker run -d -p 8081:8080 --name java1-container 10.0.2.15:8084/java-1:${BUILD_NUMBER}
-        """
-    }
-}
-```
-
----
-
-If you want, I can help you set up:
-
-* Full CI/CD flow (build → push → pull → deploy automatically)
-* Or deploy this on Kubernetes instead of plain Docker
+docker tag java3-war-app <IP>:8084/java3-war-app:latest
+🔹 STEP 6: Push Image
+docker push <IP>:8084/java3-war-app:latest
+🔹 STEP 7: Verify
+Nexus → Browse → docker-hosted
+You’ll see image
+🔥 CLEAN SUMMARY (1 LINE FLOW)
+create repo (8084) → enable realm → insecure registry → login → tag → push
