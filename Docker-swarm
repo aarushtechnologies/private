@@ -1,0 +1,189 @@
+Good — that saves you most of the setup. On CentOS with Docker already installed, getting Docker Swarm running is straightforward.
+
+Let’s focus only on what’s different / important for CentOS.
+
+---
+
+## 🧠 1. Make Sure Docker Is Running
+
+On **all nodes**:
+
+```bash
+sudo systemctl enable docker
+sudo systemctl start docker
+```
+
+Check:
+
+```bash
+docker version
+```
+
+---
+
+## 🌐 2. Check Network (Very Important on VirtualBox)
+
+Make sure:
+
+* Each VM has a **reachable IP** (not 127.0.0.1)
+* They can ping each other:
+
+```bash
+ping <other-node-ip>
+```
+
+If not, fix VirtualBox → use **Bridged Adapter** or same NAT network.
+
+---
+
+## 🔥 3. Open Required Ports (CentOS Firewall)
+
+CentOS uses `firewalld`, so you must allow Swarm ports.
+
+Run on **all nodes**:
+
+```bash
+sudo firewall-cmd --permanent --add-port=2377/tcp
+sudo firewall-cmd --permanent --add-port=7946/tcp
+sudo firewall-cmd --permanent --add-port=7946/udp
+sudo firewall-cmd --permanent --add-port=4789/udp
+sudo firewall-cmd --reload
+```
+
+---
+
+## 🧱 4. Initialize Swarm (Manager Node)
+
+On your **manager VM**:
+
+```bash
+docker swarm init --advertise-addr <MANAGER-IP>
+```
+
+Example:
+
+```bash
+docker swarm init --advertise-addr 192.168.56.101
+```
+
+You’ll get a join token like:
+
+```bash
+docker swarm join --token SWMTKN-xxx 192.168.56.101:2377
+```
+
+---
+
+## 🔗 5. Join Worker Nodes
+
+Run that join command on each worker:
+
+```bash
+docker swarm join --token <TOKEN> <MANAGER-IP>:2377
+```
+
+---
+
+## 📊 6. Verify Cluster
+
+On manager:
+
+```bash
+docker node ls
+```
+
+You should see:
+
+* 1 Leader
+* Workers as "Ready"
+
+---
+
+## 🚀 7. Test Deployment
+
+```bash
+docker service create --name web --replicas 3 -p 8080:80 nginx
+```
+
+Check:
+
+```bash
+docker service ls
+docker service ps web
+```
+
+Access:
+
+```
+http://<any-node-ip>:8080
+```
+
+---
+
+## ⚠️ Common CentOS-Specific Issues
+
+### ❌ SELinux Blocking Networking
+
+CentOS often has SELinux enabled, which can break overlay networking.
+
+Quick test (temporary):
+
+```bash
+sudo setenforce 0
+```
+
+Permanent (if needed):
+
+```bash
+sudo sed -i 's/^SELINUX=enforcing/SELINUX=permissive/' /etc/selinux/config
+```
+
+---
+
+### ❌ Docker Version Too Old
+
+Check:
+
+```bash
+docker --version
+```
+
+If it's outdated, upgrade Docker (Swarm needs modern versions).
+
+---
+
+### ❌ Wrong IP Address
+
+Don’t use:
+
+```
+127.0.0.1
+```
+
+Use:
+
+```bash
+ip addr
+```
+
+Pick something like:
+
+```
+192.168.x.x
+```
+
+---
+
+## 🧠 What You Now Have
+
+* Swarm cluster on CentOS VMs
+* Multi-node container scheduling
+* Built-in load balancing
+
+---
+
+If you want to go further, I can help you:
+
+* Deploy a **multi-container app with docker-compose in Swarm**
+* Add **persistent storage (volumes across nodes)**
+* Or compare with Kubernetes (more common in real-world jobs)
