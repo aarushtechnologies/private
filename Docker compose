@@ -1,0 +1,216 @@
+What you’re seeing is expected—`docker compose` and `docker service` are **two different things**.
+
+* `docker compose up` → creates **containers**
+* `docker service ls` → shows **Swarm services** (from `docker stack deploy`), not Compose
+
+So your containers won’t appear in `docker service ls`, only in:
+
+```bash
+docker ps
+```
+
+---
+
+## 🔻 How to stop (down) everything
+
+From the same folder where your `compose.yml` exists:
+
+```bash
+docker compose down
+```
+
+This will stop and remove all containers, networks, etc. created by that file.
+
+---
+
+## 🔻 How to stop a particular service
+
+You have a few options:
+
+### Option 1: Stop only one service
+
+```bash
+docker compose stop medical
+```
+
+### Option 2: Remove only one service container
+
+```bash
+docker compose rm -f medical
+```
+
+### Option 3: Restart / recreate a single service
+
+```bash
+docker compose up -d medical
+```
+
+---
+
+## 🔍 Check running services
+
+```bash
+docker compose ps
+```
+
+---
+
+## ⚠️ If you *intended* to use `docker service ls`
+
+Then you actually need Docker Swarm:
+
+```bash
+docker swarm init
+docker stack deploy -c compose.yml mystack
+```
+
+Then:
+
+```bash
+docker service ls
+```
+
+---
+
+## 🧠 Quick summary
+
+* Use **Compose commands** → `docker compose ...`
+* Use **Swarm commands** → `docker service ...`
+* They don’t overlap
+
+---
+
+If you want, I can show you how to convert this setup into a proper production-ready Swarm or Kubernetes deployment.
+
+<hr />
+
+Yes—you *can*, but not in the way people usually expect at first.
+
+In **Docker Compose**, you don’t manually define multiple identical containers in the YAML. Instead, you **scale a service**.
+
+---
+
+## 🔁 Option 1: Scale using CLI (recommended)
+
+For your `medical` service:
+
+```bash
+docker compose up -d --scale medical=3
+```
+
+This will create:
+
+* `medical-1`
+* `medical-2`
+* `medical-3`
+
+All from the same image.
+
+---
+
+## ⚠️ Important limitation: Ports
+
+Your current config:
+
+```yaml
+ports:
+  - "3003:80"
+```
+
+This **won’t work with scaling**, because:
+
+* Multiple containers cannot bind to the same host port (`3003`)
+
+### Fix options:
+
+#### ✅ Option A: Remove fixed port binding
+
+```yaml
+ports:
+  - "80"
+```
+
+Docker will assign random host ports.
+
+Check them with:
+
+```bash
+docker compose ps
+```
+
+---
+
+#### ✅ Option B: Use a reverse proxy (best practice)
+
+Use something like:
+
+* NGINX
+* Traefik
+
+Then:
+
+* Scale backend containers
+* Proxy distributes traffic (load balancing)
+
+---
+
+## 🧩 Option 2: Define multiple services manually (not ideal)
+
+You *could* do this:
+
+```yaml
+medical1:
+  image: aarushtechnologies/medical
+
+medical2:
+  image: aarushtechnologies/medical
+```
+
+But this is:
+
+* Hard to maintain
+* Not scalable
+* Not dynamic
+
+---
+
+## 🐳 Option 3: Swarm mode (production-style scaling)
+
+If you use Docker Swarm:
+
+```bash
+docker swarm init
+docker stack deploy -c compose.yml mystack
+```
+
+Then in YAML:
+
+```yaml
+services:
+  medical:
+    image: aarushtechnologies/medical
+    deploy:
+      replicas: 3
+```
+
+Now Docker handles:
+
+* Scaling
+* Load balancing
+
+---
+
+## 🧠 Bottom line
+
+* ✔ Yes, multiple containers = **scale the service**
+* ⚠️ Watch out for **port conflicts**
+* 🚀 For real apps, combine scaling with a **reverse proxy or Swarm**
+
+---
+
+If you tell me your use case (load balancing, testing, microservices, etc.), I can suggest the cleanest setup for you.
+
+
+
+
+
